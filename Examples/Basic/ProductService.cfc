@@ -21,6 +21,7 @@ component displayname="Product Service" hint="I am the testing Product Service" 
 	
 	/**
 	* @hint "I get a product by its ID."
+	* @ProductID "I'm a hint for the product"
 	**/
 	public struct function getProductByID( string ProductID = 1 ) {
 		
