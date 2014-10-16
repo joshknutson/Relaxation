@@ -10,8 +10,9 @@ component
 	property name="cfmlFunctions" type="component";
 	property name="DocGenerator" type="component";
 	property name="HTTPUtil" type="component";
+	property name="LogMethod" type="any";
 	property name="OnErrorMethod" type="any";
-	
+
 	variables.Config = {};
 	variables.Defaults = {
 		"Arguments" = {
@@ -32,11 +33,11 @@ component
 			,"objectProperty" = "result"
 		}
 	};
-	
+
 	/**
 	* @hint "I initialize the object and get the routing all setup."
 	**/
-	public component function init( required any Config, component BeanFactory, any AuthorizationMethod, any BasicAuthCheckMethod, any OnErrorMethod ) {
+	public component function init( required any Config, component BeanFactory, any AuthorizationMethod, any BasicAuthCheckMethod, any LogMethod, any OnErrorMethod ) {
 		/* Set object to handle CFML stuff. */
 		setcfmlFunctions( new cfmlFunctions() );
 		/* Set object to handle HTTP response stuff. */
@@ -54,6 +55,11 @@ component
 		if ( structKeyExists(arguments,'BasicAuthCheckMethod') ) {
 			setBasicAuthCheckMethod( arguments.BasicAuthCheckMethod );
 		}
+		if ( structKeyExists(arguments,'LogMethod') ) {
+			setLogMethod( arguments.LogMethod );
+			writedump(arguments);
+			abort;
+		}
 		if ( structKeyExists(arguments,'OnErrorMethod') ) {
 			setOnErrorMethod( arguments.OnErrorMethod );
 		}
@@ -66,7 +72,7 @@ component
 		/* Always return the object. */
 		return this;
 	}
-	
+
 	/**
 	* @hint "I apply the BasicAuthCheckMethod if it exists."
 	**/
@@ -83,21 +89,21 @@ component
 		}
 		return checkCredentials( credentials, ResourceInfo );
 	}
-	
+
 	/**
 	* @hint "I return the configuration structure."
 	**/
 	public struct function getConfig() {
 		return variables.Config;
 	}
-	
+
 	/**
 	* @hint "I return the defaults structure."
 	**/
 	public struct function getDefaults() {
 		return variables.Defaults;
 	}
-	
+
 	/**
 	* @hint "I will handle a REST request including appropriate output and headers."
 	**/
@@ -174,9 +180,14 @@ component
 			writeOutput( SerializeJSON(result.Response) );
 		}
 		result["Rendered"] = true;
+
+		if ( !isNull(getLogMethod()) ) {
+			var OnLog = getLogMethod();
+			OnLog(arguments,result);
+		}
 		return result;
 	}
-	
+
 	/**
 	* @hint "I will process a REST request. Given the requested path and verb, I will call the correct resource and method."
 	**/
@@ -220,7 +231,7 @@ component
 		result.AllowedVerbs = resource.AllowedVerbs;
 		if ( arguments.Verb == "OPTIONS" ) {
 			/* They just wanted to know which verbs are supported. We're done. */
-			return result;	
+			return result;
 		}
 		var authArg = {
 			"Bean" = resource.Bean,
@@ -282,21 +293,21 @@ component
 		}
 		return result;
 	}
-	
-	
+
+
 	/*
 	 * PRIVATE UTILITY FUNCTIONS
 	 **/
-	
-	
+
+
 	/**
 	* @hint "I will configure the pattern matching for the different resources."
 	**/
 	private void function configureResources( required struct Config ) {
 		if ( StructKeyExists(arguments.Config,"RequestPatterns") ) {
-			var Patterns = arguments.Config.RequestPatterns; 
+			var Patterns = arguments.Config.RequestPatterns;
 		} else if ( StructKeyExists(arguments.Config,"Patterns") ) {
-			var Patterns = arguments.Config.Patterns; 
+			var Patterns = arguments.Config.Patterns;
 		}
 		/* Apply defaults to top level config. */
 		if ( !StructKeyExists(arguments.Config, "Arguments") ) {
@@ -359,7 +370,7 @@ component
 			ArrayAppend( variables.Config.Resources, resource );
 		}
 	}
-	
+
 	/**
 	* @hint "Give an resource path and verb, I will return the config object. This will contain everything that was in the (GET,PUT,POST,etc) key in the config."
 	**/
@@ -402,7 +413,7 @@ component
 		}
 		return result;
 	}
-	
+
 	/**
 	* @hint "I will gather all the request arguments up from the possible sources. (URL, Form, URI, Request Body)"
 	**/
@@ -422,7 +433,7 @@ component
 			}
 		}
 		/* Get the value of the Body. */
-		var Payload = {};	
+		var Payload = {};
 		if ( len(trim(arguments.RequestBody)) && isJSON(trim(arguments.RequestBody)) ) {
 			/* The request body can be an array or something else that will not StructAppend. So, they are added to the args as "Payload". */
 			Payload = DeserializeJSON(trim(arguments.RequestBody));
@@ -454,7 +465,7 @@ component
 		StructAppend(args, DefaultArgs, false);	/* DefaultArguments 5th */
 		return args;
 	}
-	
+
 	/**
 	* @hint "I will get the bean from the BeanFactory or as a new object."
 	**/
@@ -470,13 +481,13 @@ component
 			return _bean;
 		}
 	}
-	
+
 	/**
 	* @hint "I will handle any type of config passed in."
 	**/
 	private struct function translateConfig( required any Config ) {
 		/* Deal with different types of configs passed in. */
-		
+
 		if ( isStruct(arguments.Config) ) {
 			/* It's already a struct. Return it. */
 			return arguments.Config;
