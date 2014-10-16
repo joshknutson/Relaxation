@@ -27,7 +27,7 @@
 			line-height: 1.2em;
 		}
 		#accordion p:first-child {
-			margin-left: 0; 
+			margin-left: 0;
 		}
 	</style>
 </head>
@@ -53,6 +53,8 @@
 										#arg.Type#
 										#arg.Name#
 										#isDefined("arg.Default")?'(default: '&arg.Default&')':''#
+										#isDefined("arg.Hint")?'(Hint: '&arg.Hint&')':''#
+
 									</li>
 								</cfloop>
 								<cfif ArrayLen(method.Parameters) EQ 0>
